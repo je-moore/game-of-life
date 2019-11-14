@@ -4,7 +4,7 @@ import produce from 'immer'
 const numRows = 100
 const numCols = 162
 const cellSize = 100 / numCols + 'vw'
-const rate = 10
+const rate = 1
 const density = 0.7
 
 const operations = [
@@ -21,7 +21,7 @@ const operations = [
 const generateEmptyGrid = () => {
   const rows = []
   for (let i = 0; i < numRows; i++) {
-    rows.push(Array.from(Array(numCols), () => 0))
+    rows.push(Array(numCols).fill(0))
   }
 
   return rows
@@ -36,6 +36,29 @@ const generateRandomGrid = () => {
   }
 
   return rows
+}
+
+const updateGrid = grid => {
+  let newGrid = generateEmptyGrid()
+  for (let i = 0; i < numRows; i++) {
+    for (let k = 0; k < numCols; k++) {
+      let neighbors = 0
+      operations.forEach(([x, y]) => {
+        const newI = i + x
+        const newK = k + y
+        if (newI >= 0 && newI < numRows && newK >= 0 && newK < numCols) {
+          neighbors += grid[newI][newK]
+        }
+      })
+
+      if (grid[i][k] === 1 && (neighbors === 3 || neighbors === 2)) {
+        newGrid[i][k] = 1
+      } else if (grid[i][k] === 0 && neighbors === 3) {
+        newGrid[i][k] = 1
+      }
+    }
+  }
+  return newGrid
 }
 
 const App = () => {
@@ -53,28 +76,7 @@ const App = () => {
       return
     }
 
-    setGrid(g => {
-      return produce(g, gridCopy => {
-        for (let i = 0; i < numRows; i++) {
-          for (let k = 0; k < numCols; k++) {
-            let neighbors = 0
-            operations.forEach(([x, y]) => {
-              const newI = i + x
-              const newK = k + y
-              if (newI >= 0 && newI < numRows && newK >= 0 && newK < numCols) {
-                neighbors += g[newI][newK]
-              }
-            })
-
-            if (neighbors < 2 || neighbors > 3) {
-              gridCopy[i][k] = 0
-            } else if (g[i][k] === 0 && neighbors === 3) {
-              gridCopy[i][k] = 1
-            }
-          }
-        }
-      })
-    })
+    setGrid(g => updateGrid(g))
     setTimeout(runSimulation, rate)
   }, [])
 
