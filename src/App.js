@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useRef } from 'react'
 import produce from 'immer'
 
-const numRows = 124
+const numRows = 120
 const numCols = 200
+const numCells = numCols * numRows
 const cellSize = 100 / numCols + 'vw'
 const rate = 1
 const density = 0.7
@@ -18,29 +19,29 @@ const neighborOffsets = [
   -numCols + 1,
 ]
 
-const generateEmptyGrid = () => Array(numCols * numRows).fill(0)
+const generateEmptyGrid = () => Array(numCells).fill(0)
 
 const generateRandomGrid = () =>
-  Array.from(Array(numCols * numRows), () => (Math.random() > density ? 1 : 0))
+  Array.from(Array(numCells), () => (Math.random() > density ? 1 : 0))
 
 const updateGrid = grid => {
-  let newGrid = generateEmptyGrid()
-  for (let i = 0; i < numRows * numCols; i++) {
-    let neighbors = 0
-    neighborOffsets.forEach(x => {
-      const neighborIndex = i + x
-      if (neighborIndex >= 0 && neighborIndex < numRows * numCols) {
-        neighbors += grid[neighborIndex]
-      }
-    })
-
-    if (grid[i] === 1 && (neighbors === 3 || neighbors === 2)) {
-      newGrid[i] = 1
-    } else if (grid[i] === 0 && neighbors === 3) {
-      newGrid[i] = 1
-    }
-  }
-  return newGrid
+  return grid.map((cell, cellIndex, grid) => {
+    const numNeighbors = neighborOffsets.reduce((accumulator, offset) => {
+      const neighborIndex = offset + cellIndex
+      return neighborIndex >= 0 &&
+        neighborIndex < numCells &&
+        !(
+          cellIndex % numCols === 0 && neighborIndex % numCols === numCols - 1
+        ) &&
+        !(cellIndex % numCols === numCols - 1 && neighborIndex % numCols === 0)
+        ? accumulator + grid[neighborIndex]
+        : accumulator
+    }, 0)
+    return (grid[cellIndex] === 0 && numNeighbors === 3) ||
+      (grid[cellIndex] === 1 && (numNeighbors === 3 || numNeighbors === 2))
+      ? 1
+      : 0
+  })
 }
 
 const App = () => {
@@ -88,6 +89,13 @@ const App = () => {
         }}
       >
         clear
+      </button>
+      <button
+        onClick={() => {
+          setGrid(() => updateGrid(grid))
+        }}
+      >
+        update
       </button>
       <div
         style={{
